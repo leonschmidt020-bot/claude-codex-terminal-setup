@@ -67,5 +67,26 @@ fi
 if [ -n "$context" ]; then
   printf '%s · %s%sKontext:%s %s%%' "$dim" "$reset" "$dim" "$reset" "$context"
 fi
+
+IMG_STATE="$HOME/.claude/img-status"
+if [ -f "$IMG_STATE" ]; then
+  now=$(date +%s)
+  mt=$(/usr/bin/stat -f %m "$IMG_STATE" 2>/dev/null || echo 0)
+  age=$((now - mt))
+  if [ "$age" -lt 1200 ]; then
+    IFS='|' read -r img_total img_mode < "$IMG_STATE"
+    case "$img_total" in ''|*[!0-9]*) img_total=1 ;; esac
+    [ -n "$img_mode" ] || img_mode="hoch"
+    img_done=$(/usr/bin/find "$HOME/.codex/generated_images" -name "*.png" -newer "$IMG_STATE" 2>/dev/null | /usr/bin/wc -l | /usr/bin/tr -d ' ')
+    exp=240; [ "$img_mode" = "schnell" ] && exp=120
+    pct=$((age * 100 / exp)); [ "$pct" -gt 99 ] && pct=99
+    magenta=$'\033[35m'
+    if [ "$img_done" -ge "$img_total" ]; then
+      printf '%s · %s%sBilder:%s %s%s/%s fertig ✓%s' "$dim" "$reset" "$dim" "$reset" "$green" "$img_done" "$img_total" "$reset"
+    else
+      printf '%s · %s%sBilder:%s %s%s/%s · ~%s%% · %s%s' "$dim" "$reset" "$dim" "$reset" "$magenta" "$img_done" "$img_total" "$pct" "$img_mode" "$reset"
+    fi
+  fi
+fi
 printf '%s\n' "$reset"
 exit 0
